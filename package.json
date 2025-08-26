@@ -1,0 +1,36 @@
+{
+  "name": "sentinel-safe-wallet",
+  "version": "0.1.0",
+  "description": "AI-native collaborative multi-signature wallet",
+  "private": true,
+  "workspaces": [
+    "backend/orchestrator",
+    "backend/ai-agents", 
+    "backend/fee-delegation"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd backend/orchestrator && npm install && cd ../ai-agents && npm install && cd ../fee-delegation && npm install",
+    "dev": "concurrently \"npm run dev:orchestrator\" \"npm run dev:ai-agents\" \"npm run dev:fee-delegation\"",
+    "dev:orchestrator": "cd backend/orchestrator && npm run dev",
+    "dev:ai-agents": "cd backend/ai-agents && npm run dev",
+    "dev:fee-delegation": "cd backend/fee-delegation && npm run dev",
+    "start": "concurrently \"npm run start:orchestrator\" \"npm run start:ai-agents\" \"npm run start:fee-delegation\"",
+    "start:orchestrator": "cd backend/orchestrator && npm start",
+    "start:ai-agents": "cd backend/ai-agents && npm start",
+    "start:fee-delegation": "cd backend/fee-delegation && npm start",
+    "test": "npm run test:orchestrator && npm run test:ai-agents && npm run test:fee-delegation",
+    "test:orchestrator": "cd backend/orchestrator && npm test",
+    "test:ai-agents": "cd backend/ai-agents && npm test",
+    "test:fee-delegation": "cd backend/fee-delegation && npm test",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test",
+    "contracts:deploy": "cd contracts && forge script script/DeploySafe.s.sol --rpc-url $KAIA_RPC_URL --broadcast"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
