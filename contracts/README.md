@@ -45,10 +45,16 @@ $ forge snapshot
 $ anvil
 ```
 
-### Deploy
+### Deploy test
 
 ```shell
-$ forge script script/DeployWithKaiaSafe.s.sol:DeployWithKaiaSafe --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ forge script script/DeployWithKaiaSafe.s.sol:DeployWithKaiaSafe --rpc-url <your_rpc_url> --private-key <your_private_key> -vvvv
+```
+
+### Depoly
+
+```shell
+$ forge script script/DeployWithKaiaSafe.s.sol:DeployWithKaiaSafe --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast -vvvv
 ```
 
 ### Cast
