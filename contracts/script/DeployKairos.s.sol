@@ -76,8 +76,8 @@ contract DeployKairos is Script {
         // 3. Log deployment info
         logDeploymentInfo(safe, address(guard));
 
-        // 4. Save deployment addresses
-        saveDeploymentAddresses(safe, address(guard));
+        // 4. Print deployment addresses for manual saving
+        printDeploymentAddresses(safe, address(guard));
 
         vm.stopBroadcast();
 
@@ -88,7 +88,7 @@ contract DeployKairos is Script {
         console.log("   Function: setGuard(address)");
         console.log("   Parameter: %s", address(guard));
         console.log(
-            "\nDeployment complete! Addresses saved to contracts/.env.deployed"
+            "\nDeployment complete! Copy the addresses above to your .env file"
         );
     }
 
@@ -169,37 +169,17 @@ contract DeployKairos is Script {
         console.log("Block Explorer: https://kairos.kaiascope.com/");
     }
 
-    function saveDeploymentAddresses(address safe, address guard) internal {
-        string memory timestamp = vm.toString(block.timestamp);
-
-        string memory content = string(
-            abi.encodePacked(
-                "# Kaia Kairos Testnet Deployment\n",
-                "# Timestamp: ",
-                timestamp,
-                "\n",
-                "# Block: ",
-                vm.toString(block.number),
-                "\n\n",
-                "SAFE_PROXY_ADDRESS=",
-                vm.toString(safe),
-                "\n",
-                "SAFE_ROLE_GUARD_ADDRESS=",
-                vm.toString(guard),
-                "\n",
-                "\n# Safe Infrastructure (Kairos)\n",
-                "SAFE_SINGLETON=",
-                vm.toString(SAFE_SINGLETON),
-                "\n",
-                "SAFE_PROXY_FACTORY=",
-                vm.toString(SAFE_PROXY_FACTORY),
-                "\n",
-                "SAFE_FALLBACK_HANDLER=",
-                vm.toString(SAFE_FALLBACK_HANDLER),
-                "\n"
-            )
-        );
-
-        vm.writeFile("contracts/.env.deployed", content);
+    function printDeploymentAddresses(address safe, address guard) internal view {
+        console.log("\n=== SAVE THESE ADDRESSES ===");
+        console.log("# Add to your .env file:");
+        console.log("");
+        console.log("SAFE_PROXY_ADDRESS=%s", safe);
+        console.log("SAFE_ROLE_GUARD_ADDRESS=%s", guard);
+        console.log("");
+        console.log("# Safe Infrastructure (Kairos)");
+        console.log("SAFE_SINGLETON=%s", SAFE_SINGLETON);
+        console.log("SAFE_PROXY_FACTORY=%s", SAFE_PROXY_FACTORY);
+        console.log("SAFE_FALLBACK_HANDLER=%s", SAFE_FALLBACK_HANDLER);
+        console.log("===========================");
     }
 }

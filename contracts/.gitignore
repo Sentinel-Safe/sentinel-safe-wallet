@@ -6,6 +6,8 @@ out/
 !/broadcast
 /broadcast/*/31337/
 /broadcast/**/dry-run/
+broadcast
+# 잘 모르겠지만 제외해야 하는것 같음.
 
 # Docs
 docs/
