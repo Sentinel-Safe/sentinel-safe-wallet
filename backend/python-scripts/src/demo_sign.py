@@ -36,14 +36,6 @@ def load_signers() -> Dict[str, Dict[str, str]]:
             "type": "human",
         }
 
-    if os.getenv("HUMAN2_PRIVATE_KEY"):
-        account = Account.from_key(os.getenv("HUMAN2_PRIVATE_KEY"))
-        signers["Human 2"] = {
-            "address": account.address,
-            "private_key": os.getenv("HUMAN2_PRIVATE_KEY"),
-            "type": "human",
-        }
-
     # AI Agent signers
     if os.getenv("AI_CFO_PRIVATE_KEY"):
         account = Account.from_key(os.getenv("AI_CFO_PRIVATE_KEY"))
@@ -67,6 +59,14 @@ def load_signers() -> Dict[str, Dict[str, str]]:
             "address": account.address,
             "private_key": os.getenv("AI_ANALYST_PRIVATE_KEY"),
             "type": "ai_agent",
+        }
+
+    if os.getenv("HUMAN2_PRIVATE_KEY"):
+        account = Account.from_key(os.getenv("HUMAN2_PRIVATE_KEY"))
+        signers["Human 2"] = {
+            "address": account.address,
+            "private_key": os.getenv("HUMAN2_PRIVATE_KEY"),
+            "type": "human",
         }
 
     return signers
@@ -357,7 +357,9 @@ def main():
 
                 # Check if we have enough signatures
                 if signatures_collected >= 4:
-                    print(f"\n🎉 Sufficient signatures collected! ({signatures_collected}/5)")
+                    print(
+                        f"\n🎉 Sufficient signatures collected! ({signatures_collected}/5)"
+                    )
 
                     # Ask if they want to continue with the 5th signer
                     if (
