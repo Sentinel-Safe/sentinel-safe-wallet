@@ -45,6 +45,19 @@ make fmt
 make clippy
 ```
 
+### Python Scripts (UV)
+
+```bash
+# Navigate to Python scripts directory
+cd backend/python-scripts/
+
+# Install dependencies with UV
+uv sync
+
+# Run demo signing script
+uv run src/demo_sign.py
+```
+
 ### Smart Contracts (Foundry)
 
 ```bash

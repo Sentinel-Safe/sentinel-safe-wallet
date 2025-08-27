@@ -61,6 +61,15 @@ dev:
 	@echo "Starting all backend services..."
 	@make -j3 orchestrator ai-agents fee-delegation
 
+# Run demo of multi-signature flow
+demo-orchestrator:
+	@echo "🚀 Starting orchestrator for demo..."
+	cd backend && cargo run --bin orchestrator
+
+demo-test:
+	@echo "🔐 Running multi-signature demo..."
+	cd backend && ./demo_test.sh
+
 # Contract commands
 contracts-build:
 	cd contracts && forge build
