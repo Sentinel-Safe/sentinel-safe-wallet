@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -10,7 +11,6 @@ use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use async_trait::async_trait;
 
 #[derive(Clone)]
 struct AppState {
@@ -22,7 +22,6 @@ struct AppState {
 #[async_trait]
 trait AiAgent: Send + Sync {
     async fn analyze(&self, transaction: &TransactionData) -> AnalysisResult;
-    async fn sign(&self, transaction: &TransactionData) -> Option<String>;
 }
 
 struct CfoAgent {
@@ -64,7 +63,7 @@ struct HealthResponse {
 impl AiAgent for CfoAgent {
     async fn analyze(&self, transaction: &TransactionData) -> AnalysisResult {
         info!("CFO Agent analyzing transaction to: {}", transaction.to);
-        
+
         AnalysisResult {
             agent: self.name.clone(),
             approved: true,
@@ -72,18 +71,16 @@ impl AiAgent for CfoAgent {
             reasons: vec!["Within budget limits".to_string()],
         }
     }
-
-    async fn sign(&self, _transaction: &TransactionData) -> Option<String> {
-        info!("CFO Agent signing transaction");
-        Some("0xcfo_signature_placeholder".to_string())
-    }
 }
 
 #[async_trait]
 impl AiAgent for SecurityAgent {
     async fn analyze(&self, transaction: &TransactionData) -> AnalysisResult {
-        info!("Security Agent analyzing transaction to: {}", transaction.to);
-        
+        info!(
+            "Security Agent analyzing transaction to: {}",
+            transaction.to
+        );
+
         AnalysisResult {
             agent: self.name.clone(),
             approved: true,
@@ -91,29 +88,22 @@ impl AiAgent for SecurityAgent {
             reasons: vec!["Address not in blacklist".to_string()],
         }
     }
-
-    async fn sign(&self, _transaction: &TransactionData) -> Option<String> {
-        info!("Security Agent signing transaction");
-        Some("0xsecurity_signature_placeholder".to_string())
-    }
 }
 
 #[async_trait]
 impl AiAgent for OnchainAnalyst {
     async fn analyze(&self, transaction: &TransactionData) -> AnalysisResult {
-        info!("Onchain Analyst analyzing transaction to: {}", transaction.to);
-        
+        info!(
+            "Onchain Analyst analyzing transaction to: {}",
+            transaction.to
+        );
+
         AnalysisResult {
             agent: self.name.clone(),
             approved: true,
             risk_score: 0.3,
             reasons: vec!["Contract verified on chain".to_string()],
         }
-    }
-
-    async fn sign(&self, _transaction: &TransactionData) -> Option<String> {
-        info!("Onchain Analyst signing transaction");
-        Some("0xanalyst_signature_placeholder".to_string())
     }
 }
 
@@ -160,9 +150,7 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3002")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3002").await.unwrap();
 
     info!("AI Agents service listening on http://0.0.0.0:3002");
 

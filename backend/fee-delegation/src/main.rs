@@ -20,10 +20,8 @@ impl AppState {
     fn new() -> Self {
         let fee_payer_address = std::env::var("FEE_PAYER_ADDRESS")
             .unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
-        
-        Self {
-            fee_payer_address,
-        }
+
+        Self { fee_payer_address }
     }
 }
 
@@ -90,9 +88,7 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3003")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3003").await.unwrap();
 
     info!("Fee Delegation service listening on http://0.0.0.0:3003");
 
@@ -111,13 +107,13 @@ async fn delegate_fee(
     State(state): State<Arc<AppState>>,
     Json(request): Json<DelegationRequest>,
 ) -> Result<(StatusCode, Json<DelegationResponse>), StatusCode> {
-    info!("Delegating fee for transaction from {} to {}", 
-        request.transaction.from, 
-        request.transaction.to
+    info!(
+        "Delegating fee for transaction from {} to {}",
+        request.transaction.from, request.transaction.to
     );
-    
+
     let tx_hash = format!("0x{}", uuid::Uuid::new_v4().simple());
-    
+
     Ok((
         StatusCode::OK,
         Json(DelegationResponse {
@@ -133,9 +129,9 @@ async fn estimate_fee(
     Json(transaction): Json<DelegatedTransaction>,
 ) -> Result<Json<FeeEstimate>, StatusCode> {
     info!("Estimating fee for transaction to: {}", transaction.to);
-    
+
     Ok(Json(FeeEstimate {
-        estimated_fee: "1000000000000000".to_string(), 
+        estimated_fee: "1000000000000000".to_string(),
         gas_price: "25000000000".to_string(),
         gas_limit: "21000".to_string(),
     }))
@@ -146,7 +142,7 @@ async fn get_delegation_status(
     axum::extract::Path(tx_hash): axum::extract::Path<String>,
 ) -> Result<Json<DelegationResponse>, StatusCode> {
     info!("Getting delegation status for: {}", tx_hash);
-    
+
     Ok(Json(DelegationResponse {
         transaction_hash: tx_hash,
         fee_payer: state.fee_payer_address.clone(),

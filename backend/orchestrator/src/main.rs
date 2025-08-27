@@ -12,14 +12,10 @@ use axum::{
 use safe_contract::{SafeTransaction, Signature};
 use safe_contract_abi::SafeExecutor;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    str::FromStr,
-    sync::Arc,
-};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
-use tracing::{info, error};
+use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
@@ -32,7 +28,6 @@ struct SignerAddresses {
 }
 
 struct AppState {
-    rpc_url: String,
     safe_address: Address,
     transactions: Arc<RwLock<HashMap<String, TransactionState>>>,
     signer_addresses: SignerAddresses,
@@ -125,30 +120,30 @@ async fn main() -> anyhow::Result<()> {
     let safe_address = std::env::var("SAFE_ADDRESS")
         .ok()
         .and_then(|s| Address::from_str(&s).ok())
-        .unwrap_or_else(|| Address::ZERO);
+        .unwrap_or(Address::ZERO);
 
     // Load signer addresses from env
     let signer_addresses = SignerAddresses {
         human1: std::env::var("HUMAN1_ADDRESS")
             .ok()
             .and_then(|s| Address::from_str(&s).ok())
-            .unwrap_or_else(|| Address::ZERO),
+            .unwrap_or(Address::ZERO),
         human2: std::env::var("HUMAN2_ADDRESS")
             .ok()
             .and_then(|s| Address::from_str(&s).ok())
-            .unwrap_or_else(|| Address::ZERO),
+            .unwrap_or(Address::ZERO),
         ai_cfo: std::env::var("AI_CFO_ADDRESS")
             .ok()
             .and_then(|s| Address::from_str(&s).ok())
-            .unwrap_or_else(|| Address::ZERO),
+            .unwrap_or(Address::ZERO),
         ai_security: std::env::var("AI_SECURITY_ADDRESS")
             .ok()
             .and_then(|s| Address::from_str(&s).ok())
-            .unwrap_or_else(|| Address::ZERO),
+            .unwrap_or(Address::ZERO),
         ai_analyst: std::env::var("AI_ANALYST_ADDRESS")
             .ok()
             .and_then(|s| Address::from_str(&s).ok())
-            .unwrap_or_else(|| Address::ZERO),
+            .unwrap_or(Address::ZERO),
     };
 
     info!("Loaded signer addresses:");
@@ -162,11 +157,10 @@ async fn main() -> anyhow::Result<()> {
     let safe_executor = Arc::new(
         SafeExecutor::new(&rpc_url, &safe_address.to_string())
             .await
-            .expect("Failed to initialize Safe executor")
+            .expect("Failed to initialize Safe executor"),
     );
 
     let state = Arc::new(AppState {
-        rpc_url,
         safe_address,
         transactions: Arc::new(RwLock::new(HashMap::new())),
         signer_addresses,
@@ -179,14 +173,22 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/v1/transactions", post(create_transaction))
         .route("/api/v1/transactions/{tx_id}", get(get_transaction))
         .route("/api/v1/transactions/{tx_id}/sign", post(sign_transaction))
-        .route("/api/v1/transactions/{tx_id}/execute", post(execute_transaction))
-        .route("/api/v1/transactions/{tx_id}/status", get(get_transaction_status))
-        .route("/api/v1/ai-agents/analyze/{tx_id}", get(ai_analyze_transaction))
+        .route(
+            "/api/v1/transactions/{tx_id}/execute",
+            post(execute_transaction),
+        )
+        .route(
+            "/api/v1/transactions/{tx_id}/status",
+            get(get_transaction_status),
+        )
+        .route(
+            "/api/v1/ai-agents/analyze/{tx_id}",
+            get(ai_analyze_transaction),
+        )
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
-        .await?;
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001").await?;
 
     info!("🚀 Orchestrator running on http://0.0.0.0:3001");
     info!("Safe address: {}", safe_address);
@@ -237,22 +239,19 @@ async fn create_transaction(
 ) -> Result<Json<CreateTransactionResponse>, StatusCode> {
     info!("Creating transaction to: {}, value: {}", req.to, req.value);
 
-    let to = Address::from_str(&req.to)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let to = Address::from_str(&req.to).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let value = U256::from_str(&req.value)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let value = U256::from_str(&req.value).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let data = req.data
+    let data = req
+        .data
         .and_then(|d| hex::decode(d.trim_start_matches("0x")).ok())
         .map(Bytes::from)
         .unwrap_or_else(Bytes::new);
 
     // Get current nonce from Safe contract
-    let nonce = state.safe_executor.get_nonce()
-        .await
-        .unwrap_or(U256::ZERO);
-    
+    let nonce = state.safe_executor.get_nonce().await.unwrap_or(U256::ZERO);
+
     // Create Safe transaction
     let safe_tx = SafeTransaction {
         to,
@@ -268,9 +267,10 @@ async fn create_transaction(
     };
 
     let tx_id = uuid::Uuid::new_v4().to_string();
-    
+
     // Get the actual Safe transaction hash from the contract
-    let safe_tx_hash = state.safe_executor
+    let safe_tx_hash = state
+        .safe_executor
         .get_transaction_hash(to, value, data, nonce)
         .await
         .map(|h| h.to_string())
@@ -286,7 +286,11 @@ async fn create_transaction(
         tx_hash: safe_tx_hash.clone(),
     };
 
-    state.transactions.write().await.insert(tx_id.clone(), tx_state);
+    state
+        .transactions
+        .write()
+        .await
+        .insert(tx_id.clone(), tx_state);
 
     Ok(Json(CreateTransactionResponse {
         tx_id: tx_id.clone(),
@@ -304,23 +308,30 @@ async fn get_transaction(
     let txs = state.transactions.read().await;
     let tx_state = txs.get(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
 
-    let signatures: Vec<SignatureInfo> = tx_state.signatures.iter().map(|sig| {
-        let signer_type = if sig.signer == state.signer_addresses.human1 || sig.signer == state.signer_addresses.human2 {
-            "Human"
-        } else if sig.signer == state.signer_addresses.ai_cfo ||
-                  sig.signer == state.signer_addresses.ai_security ||
-                  sig.signer == state.signer_addresses.ai_analyst {
-            "AI Agent"
-        } else {
-            "Unknown"
-        };
+    let signatures: Vec<SignatureInfo> = tx_state
+        .signatures
+        .iter()
+        .map(|sig| {
+            let signer_type = if sig.signer == state.signer_addresses.human1
+                || sig.signer == state.signer_addresses.human2
+            {
+                "Human"
+            } else if sig.signer == state.signer_addresses.ai_cfo
+                || sig.signer == state.signer_addresses.ai_security
+                || sig.signer == state.signer_addresses.ai_analyst
+            {
+                "AI Agent"
+            } else {
+                "Unknown"
+            };
 
-        SignatureInfo {
-            signer: sig.signer.to_string(),
-            signer_type: signer_type.to_string(),
-            signed_at: chrono::Utc::now().to_rfc3339(),
-        }
-    }).collect();
+            SignatureInfo {
+                signer: sig.signer.to_string(),
+                signer_type: signer_type.to_string(),
+                signed_at: chrono::Utc::now().to_rfc3339(),
+            }
+        })
+        .collect();
 
     let ready_to_execute = tx_state.signatures.len() >= 4;
 
@@ -342,8 +353,8 @@ async fn sign_transaction(
     let mut txs = state.transactions.write().await;
     let tx_state = txs.get_mut(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
 
-    let signer_addr = Address::from_str(&req.signer_address)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let signer_addr =
+        Address::from_str(&req.signer_address).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // Check if already signed
     if tx_state.signatures.iter().any(|s| s.signer == signer_addr) {
@@ -370,11 +381,14 @@ async fn sign_transaction(
     }
 
     // Determine signer type based on known addresses
-    let signer_type = if signer_addr == state.signer_addresses.human1 || signer_addr == state.signer_addresses.human2 {
+    let signer_type = if signer_addr == state.signer_addresses.human1
+        || signer_addr == state.signer_addresses.human2
+    {
         "Human"
-    } else if signer_addr == state.signer_addresses.ai_cfo ||
-              signer_addr == state.signer_addresses.ai_security ||
-              signer_addr == state.signer_addresses.ai_analyst {
+    } else if signer_addr == state.signer_addresses.ai_cfo
+        || signer_addr == state.signer_addresses.ai_security
+        || signer_addr == state.signer_addresses.ai_analyst
+    {
         "AI Agent"
     } else {
         "Unknown"
@@ -403,15 +417,21 @@ async fn execute_transaction(
         }));
     }
 
-    info!("Executing transaction with {} signatures", tx_state.signatures.len());
+    info!(
+        "Executing transaction with {} signatures",
+        tx_state.signatures.len()
+    );
 
     // Log who signed
     for (i, sig) in tx_state.signatures.iter().enumerate() {
-        let signer_type = if sig.signer == state.signer_addresses.human1 || sig.signer == state.signer_addresses.human2 {
+        let signer_type = if sig.signer == state.signer_addresses.human1
+            || sig.signer == state.signer_addresses.human2
+        {
             "Human"
-        } else if sig.signer == state.signer_addresses.ai_cfo ||
-                  sig.signer == state.signer_addresses.ai_security ||
-                  sig.signer == state.signer_addresses.ai_analyst {
+        } else if sig.signer == state.signer_addresses.ai_cfo
+            || sig.signer == state.signer_addresses.ai_security
+            || sig.signer == state.signer_addresses.ai_analyst
+        {
             "AI Agent"
         } else {
             "Unknown"
@@ -422,18 +442,20 @@ async fn execute_transaction(
     // Execute transaction on blockchain
     let tx = &tx_state.transaction;
     let signatures = tx_state.signatures.clone();
-    
+
     // Call Safe contract's execTransaction
-    match state.safe_executor.execute_transaction(
-        tx.to,
-        tx.value,
-        tx.data.clone(),
-        signatures
-    ).await {
+    match state
+        .safe_executor
+        .execute_transaction(tx.to, tx.value, tx.data.clone(), signatures)
+        .await
+    {
         Ok(tx_hash) => {
             tx_state.status = TransactionStatus::Executed;
-            info!("Transaction executed successfully on blockchain: {}", tx_hash);
-            
+            info!(
+                "Transaction executed successfully on blockchain: {}",
+                tx_hash
+            );
+
             Ok(Json(ExecuteTransactionResponse {
                 tx_hash: tx_hash.to_string(),
                 success: true,
@@ -442,7 +464,7 @@ async fn execute_transaction(
         Err(e) => {
             error!("Failed to execute transaction: {}", e);
             tx_state.status = TransactionStatus::Failed;
-            
+
             Ok(Json(ExecuteTransactionResponse {
                 tx_hash: String::new(),
                 success: false,
@@ -458,22 +480,29 @@ async fn get_transaction_status(
     let txs = state.transactions.read().await;
     let tx_state = txs.get(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
 
-    let signers: Vec<serde_json::Value> = tx_state.signatures.iter().map(|s| {
-        let signer_type = if s.signer == state.signer_addresses.human1 || s.signer == state.signer_addresses.human2 {
-            "Human"
-        } else if s.signer == state.signer_addresses.ai_cfo ||
-                  s.signer == state.signer_addresses.ai_security ||
-                  s.signer == state.signer_addresses.ai_analyst {
-            "AI Agent"
-        } else {
-            "Unknown"
-        };
+    let signers: Vec<serde_json::Value> = tx_state
+        .signatures
+        .iter()
+        .map(|s| {
+            let signer_type = if s.signer == state.signer_addresses.human1
+                || s.signer == state.signer_addresses.human2
+            {
+                "Human"
+            } else if s.signer == state.signer_addresses.ai_cfo
+                || s.signer == state.signer_addresses.ai_security
+                || s.signer == state.signer_addresses.ai_analyst
+            {
+                "AI Agent"
+            } else {
+                "Unknown"
+            };
 
-        serde_json::json!({
-            "address": s.signer.to_string(),
-            "type": signer_type
+            serde_json::json!({
+                "address": s.signer.to_string(),
+                "type": signer_type
+            })
         })
-    }).collect();
+        .collect();
 
     Ok(Json(serde_json::json!({
         "tx_id": tx_id,
