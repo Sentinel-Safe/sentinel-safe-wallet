@@ -80,10 +80,10 @@ API_URL = "http://localhost:3001/api/v1"
 
 def create_transaction() -> Dict[str, Any]:
     """Create a new transaction proposal interactively"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("💼 새 트랜잭션 생성")
-    print("="*60)
-    
+    print("=" * 60)
+
     # Get recipient address
     print("\n📮 수신자 주소를 입력하세요")
     print("   (Enter 누르면 기본값: 0x6f512E3F002065813B92009C74E3a7966e7F87E1)")
@@ -91,7 +91,7 @@ def create_transaction() -> Dict[str, Any]:
     to_address = input().strip()
     if not to_address:
         to_address = "0x6f512E3F002065813B92009C74E3a7966e7F87E1"
-    
+
     # Get amount
     print("\n💰 전송할 KAIA 양을 입력하세요")
     print("   (Enter 누르면 기본값: 0.001 KAIA)")
@@ -99,11 +99,11 @@ def create_transaction() -> Dict[str, Any]:
     amount_str = input().strip()
     if not amount_str:
         amount_str = "0.001"
-    
+
     # Convert to wei
     amount_wei = str(int(float(amount_str) * 10**18))
-    
-    print(f"\n📝 트랜잭션 생성 중...")
+
+    print("\n📝 트랜잭션 생성 중...")
     print(f"   To: {to_address}")
     print(f"   Amount: {amount_str} KAIA")
 
@@ -120,7 +120,7 @@ def create_transaction() -> Dict[str, Any]:
         raise Exception(f"Failed to create transaction: {response.text}")
 
     result = response.json()
-    print(f"\n✅ 트랜잭션 생성 완료!")
+    print("\n✅ 트랜잭션 생성 완료!")
     print(f"   TX ID: {result['tx_id']}")
     print(f"   Safe TX Hash: {result['safe_tx_hash'][:10]}...")
 
@@ -128,43 +128,83 @@ def create_transaction() -> Dict[str, Any]:
 
 
 def sign_message_with_key(message_hash: str, private_key: str) -> str:
-    """Sign a message hash with a private key using EIP-191"""
-    # Remove 0x prefix if present
-    if message_hash.startswith("0x"):
-        message_hash = message_hash[2:]
+    """Sign a message hash with a private key for Safe transactions"""
+    from eth_utils import keccak
+    from web3 import Web3
 
-    # Convert hash to bytes
-    message_bytes = bytes.fromhex(message_hash)
+    # Debug: Print the hash we received
+    print(
+        f"   Debug - Received hash: {message_hash[:70]}... (length: {len(message_hash)})"
+    )
 
-    # Create account from private key
-    account = Account.from_key(private_key)
+    # Safe transaction hash should be exactly 66 characters (0x + 64 hex chars)
+    if len(message_hash) == 66 and message_hash.startswith("0x"):
+        # This is the correct format - a 32-byte hash
+        message_bytes = bytes.fromhex(message_hash[2:])
+    else:
+        # Something is wrong - log for debugging
+        print(
+            f"   WARNING: Unexpected hash format! Expected 66 chars, got {len(message_hash)}"
+        )
+        # For now, handle it as before
+        if len(message_hash) > 66:
+            # This shouldn't happen for Safe tx hash
+            message_bytes = keccak(
+                message_hash.encode() if isinstance(message_hash, str) else message_hash
+            )
+        else:
+            if not message_hash.startswith("0x"):
+                message_hash = "0x" + message_hash
+            if len(message_hash) < 66:
+                message_hash = "0x" + message_hash[2:].zfill(64)
+            message_bytes = bytes.fromhex(message_hash[2:])
 
-    # For Safe transactions, we sign the hash directly (not as an Ethereum message)
-    # This is equivalent to web3.eth.account.signHash()
-    signature = account.signHash(message_bytes)
+    if len(message_bytes) != 32:
+        raise ValueError(f"Hash must be exactly 32 bytes, got {len(message_bytes)}")
 
-    # Return signature in hex format (65 bytes: r[32] + s[32] + v[1])
-    return "0x" + signature.signature.hex()
+    # Use eth_account's signing method
+    w3 = Web3()
+    account = w3.eth.account.from_key(private_key)
+
+    # Sign the hash directly (without ethereum message prefix)
+    from eth_account import Account
+
+    # Create the signature
+    signature = Account._sign_hash(message_bytes, private_key)
+
+    # Return the signature for Safe (r + s + v format)
+    # Safe expects v to be 27 or 28 for EOA signatures
+    sig_hex = (
+        signature.r.to_bytes(32, "big")
+        + signature.s.to_bytes(32, "big")
+        + bytes([signature.v])
+    )
+
+    return "0x" + sig_hex.hex()
 
 
 def submit_signature(
-    tx_id: str, signer_name: str, signer_info: Dict[str, str], tx_hash: str, signatures_count: int
+    tx_id: str,
+    signer_name: str,
+    signer_info: Dict[str, str],
+    tx_hash: str,
+    signatures_count: int,
 ) -> bool:
     """Submit a signature to the orchestrator with interactive confirmation"""
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"🔐 {signer_name} ({signer_info['type'].replace('_', ' ').title()})")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"📍 Address: {signer_info['address']}")
     print(f"📊 현재 서명 수: {signatures_count}/5")
-    
+
     # AI agents can analyze the transaction
-    if signer_info['type'] == 'ai_agent':
+    if signer_info["type"] == "ai_agent":
         print(f"\n🤖 {signer_name} 분석 중...")
         time.sleep(0.5)  # Simulate analysis time
-        
+
         if "CFO" in signer_name:
-            print("   💰 재무 규칙 검증: ✅ 0.001 KAIA - 일일 한도 내")
+            print("   💰 재무 규칙 검증: ✅ 1 KAIA - 일일 한도 내")
             print("   📊 예산 준수: ✅ 테스트 한도 이내")
         elif "Security" in signer_name:
             print("   🔒 수신 주소 검증: ✅ 블랙리스트 없음")
@@ -172,17 +212,17 @@ def submit_signature(
         elif "Analyst" in signer_name:
             print("   📈 트랜잭션 분석: 단순 전송")
             print("   🔍 컨트랙트 위험: 없음")
-    
+
     # Ask for confirmation
     print(f"\n❓ {signer_name}(으)로 서명하시겠습니까? (y/n): ", end="")
     response = input().strip().lower()
-    
-    if response != 'y':
+
+    if response != "y":
         print(f"   ⏭️  {signer_name} 서명 건너뜀")
         print()
         return False
 
-    print(f"\n🖊️  서명 중...")
+    print("\n🖊️  서명 중...")
     # All signers provide their own signatures
     signature = sign_message_with_key(tx_hash, signer_info["private_key"])
 
@@ -295,9 +335,9 @@ def main():
             )
             return 1
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("📝 서명 수집 시작 (최소 4/5 필요)")
-        print("="*60)
+        print("=" * 60)
 
         signatures_collected = 0
         signed_addresses = set()
@@ -307,24 +347,34 @@ def main():
             # Skip if already signed
             if signer_info["address"] in signed_addresses:
                 continue
-                
+
             # Submit signature with current count
-            if submit_signature(tx_id, signer_name, signer_info, tx_hash, signatures_collected):
+            if submit_signature(
+                tx_id, signer_name, signer_info, tx_hash, signatures_collected
+            ):
                 signatures_collected += 1
                 signed_addresses.add(signer_info["address"])
-                
+
                 # Check if we have enough signatures
                 if signatures_collected >= 4:
                     print(f"\n🎉 충분한 서명 수집 완료! ({signatures_collected}/5)")
-                    
+
                     # Ask if they want to continue with the 5th signer
-                    if signatures_collected < 5 and (len(signers_list) - signers_list.index((signer_name, signer_info)) - 1) > 0:
+                    if (
+                        signatures_collected < 5
+                        and (
+                            len(signers_list)
+                            - signers_list.index((signer_name, signer_info))
+                            - 1
+                        )
+                        > 0
+                    ):
                         print("\n❓ 추가 서명을 받으시겠습니까? (y/n): ", end="")
                         continue_signing = input().strip().lower()
-                        if continue_signing != 'y':
+                        if continue_signing != "y":
                             break
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         # 3. Check final status
         status = check_status(tx_id)
 
@@ -332,13 +382,15 @@ def main():
         if status and status["signatures_collected"] >= 4:
             print("\n❓ 트랜잭션을 실행하시겠습니까? (y/n): ", end="")
             execute_response = input().strip().lower()
-            
-            if execute_response == 'y':
+
+            if execute_response == "y":
                 execute_result = execute_transaction(tx_id)
             else:
                 print("⏸️  트랜잭션 실행 보류")
         else:
-            print(f"\n❌ 서명 부족으로 실행 불가 ({status['signatures_collected']}/4 필요)")
+            print(
+                f"\n❌ 서명 부족으로 실행 불가 ({status['signatures_collected']}/4 필요)"
+            )
 
         print()
         print("=" * 60)

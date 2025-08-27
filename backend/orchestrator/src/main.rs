@@ -1,4 +1,5 @@
 mod safe_contract;
+mod safe_contract_abi;
 
 use alloy::primitives::{Address, Bytes, U256};
 use axum::{
@@ -9,6 +10,7 @@ use axum::{
     Router,
 };
 use safe_contract::{SafeTransaction, Signature};
+use safe_contract_abi::SafeExecutor;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -17,7 +19,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
-use tracing::info;
+use tracing::{info, error};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
@@ -29,12 +31,12 @@ struct SignerAddresses {
     ai_analyst: Address,
 }
 
-#[derive(Clone)]
 struct AppState {
     rpc_url: String,
     safe_address: Address,
     transactions: Arc<RwLock<HashMap<String, TransactionState>>>,
     signer_addresses: SignerAddresses,
+    safe_executor: Arc<SafeExecutor>,
 }
 
 #[derive(Clone)]
@@ -156,11 +158,19 @@ async fn main() -> anyhow::Result<()> {
     info!("  AI Security: {}", signer_addresses.ai_security);
     info!("  AI Analyst: {}", signer_addresses.ai_analyst);
 
+    // Initialize Safe executor
+    let safe_executor = Arc::new(
+        SafeExecutor::new(&rpc_url, &safe_address.to_string())
+            .await
+            .expect("Failed to initialize Safe executor")
+    );
+
     let state = Arc::new(AppState {
         rpc_url,
         safe_address,
         transactions: Arc::new(RwLock::new(HashMap::new())),
         signer_addresses,
+        safe_executor,
     });
 
     let app = Router::new()
@@ -238,22 +248,36 @@ async fn create_transaction(
         .map(Bytes::from)
         .unwrap_or_else(Bytes::new);
 
+    // Get current nonce from Safe contract
+    let nonce = state.safe_executor.get_nonce()
+        .await
+        .unwrap_or(U256::ZERO);
+    
     // Create Safe transaction
     let safe_tx = SafeTransaction {
         to,
         value,
-        data,
+        data: data.clone(),
         operation: 0, // Call
         safe_tx_gas: U256::ZERO,
         base_gas: U256::ZERO,
         gas_price: U256::ZERO,
         gas_token: Address::ZERO,
         refund_receiver: Address::ZERO,
-        nonce: U256::ZERO, // In production, fetch from contract
+        nonce,
     };
 
     let tx_id = uuid::Uuid::new_v4().to_string();
-    let safe_tx_hash = format!("0x{}", hex::encode(safe_tx.encode_for_signing()));
+    
+    // Get the actual Safe transaction hash from the contract
+    let safe_tx_hash = state.safe_executor
+        .get_transaction_hash(to, value, data, nonce)
+        .await
+        .map(|h| h.to_string())
+        .unwrap_or_else(|e| {
+            error!("Failed to get transaction hash from Safe: {}", e);
+            format!("0x{}", hex::encode(safe_tx.encode_for_signing()))
+        });
 
     let tx_state = TransactionState {
         transaction: safe_tx,
@@ -395,15 +419,36 @@ async fn execute_transaction(
         info!("  Signature {}: {} ({})", i + 1, sig.signer, signer_type);
     }
 
-    // In production, this would call Safe contract's execTransaction
-    tx_state.status = TransactionStatus::Executed;
-
-    let mock_tx_hash = format!("0x{}", hex::encode(&uuid::Uuid::new_v4().as_bytes()[..]));
-
-    Ok(Json(ExecuteTransactionResponse {
-        tx_hash: mock_tx_hash,
-        success: true,
-    }))
+    // Execute transaction on blockchain
+    let tx = &tx_state.transaction;
+    let signatures = tx_state.signatures.clone();
+    
+    // Call Safe contract's execTransaction
+    match state.safe_executor.execute_transaction(
+        tx.to,
+        tx.value,
+        tx.data.clone(),
+        signatures
+    ).await {
+        Ok(tx_hash) => {
+            tx_state.status = TransactionStatus::Executed;
+            info!("Transaction executed successfully on blockchain: {}", tx_hash);
+            
+            Ok(Json(ExecuteTransactionResponse {
+                tx_hash: tx_hash.to_string(),
+                success: true,
+            }))
+        }
+        Err(e) => {
+            error!("Failed to execute transaction: {}", e);
+            tx_state.status = TransactionStatus::Failed;
+            
+            Ok(Json(ExecuteTransactionResponse {
+                tx_hash: String::new(),
+                success: false,
+            }))
+        }
+    }
 }
 
 async fn get_transaction_status(
