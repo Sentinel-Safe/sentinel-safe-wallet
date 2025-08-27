@@ -2,5 +2,52 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc = "0.8.30"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+# Kaia Kairos Testnet Configuration
+[rpc_endpoints]
+kairos = "https://public-en.kairos.node.kaia.io"
+local = "http://127.0.0.1:8545"
+
+[etherscan]
+kairos = { key = "${ETHERSCAN_API_KEY}", url = "https://api-kairos.kaiascope.com/api" }
+
+# Testing configuration
+[fuzz]
+runs = 256
+max_test_rejects = 65536
+seed = "0x1"
+dictionary_weight = 40
+include_storage = true
+include_push_bytes = true
+
+[invariant]
+runs = 256
+depth = 15
+fail_on_revert = false
+
+# Fork testing from Kairos
+[profile.kairos]
+fork_url = "https://public-en.kairos.node.kaia.io"
+fork_block_number = "latest"
+fork_chain_id = 1001
+
+# Gas settings (Kaia has different gas dynamics)
+gas_limit = 10_000_000
+gas_price = 25_000_000_000 # 25 Gwei (Kaia standard)
+gas_reports = ["SafeRoleGuard", "ISafe"]
+
+# Formatter settings
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = true
+int_types = "long"
+multiline_func_header = "all"
+quote_style = "double"
+number_underscore = "thousands"
+override_spacing = true
+wrap_comments = true

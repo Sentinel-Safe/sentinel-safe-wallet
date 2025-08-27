@@ -15,66 +15,56 @@ Sentinel Safe Wallet is an AI-collaborative multi-signature wallet that requires
 
 ## Build and Development Commands
 
-### Backend Services (Node.js)
+### Backend Services (Rust/Axum)
 
 ```bash
-# Install dependencies for all services
-npm install
+# Build all services
+make build
 
-# Run the orchestrator API server
-npm run dev:orchestrator
+# Build for release
+make build-release
 
-# Run AI agent services
-npm run dev:ai-agents
-
-# Run fee delegation server
-npm run dev:fee-delegation
+# Run individual services
+make orchestrator      # Orchestrator API server (port 3001)
+make ai-agents        # AI agents service (port 3002)
+make fee-delegation   # Fee delegation server (port 3003)
 
 # Run all services concurrently
-npm run dev
+make dev
 
 # Run tests
-npm test
+make test
 
-# Run specific test suite
-npm test -- --grep "orchestrator"
-
-# Lint code
-npm run lint
+# Check code without compiling
+make check
 
 # Format code
-npm run format
+make fmt
+
+# Lint code
+make clippy
 ```
 
 ### Smart Contracts (Foundry)
 
 ```bash
-# Navigate to contracts directory
-cd contracts/
-
-# Install dependencies
-forge install
-
 # Build contracts
-forge build
+make contracts-build
 
 # Run contract tests
-forge test
-
-# Run specific test
-forge test --match-test testSuperMajority
-
-# Run tests with gas reporting
-forge test --gas-report
+make contracts-test
 
 # Format Solidity code
-forge fmt
+make contracts-fmt
 
-# Deploy to Kaia Kairos testnet
-forge script script/DeploySafe.s.sol --rpc-url https://public-en.kairos.node.kaia.io --broadcast
+# Deploy to Kaia Kairos testnet (TESTNET ONLY!)
+make contracts-deploy-testnet
 
-# Verify contract
-forge verify-contract <CONTRACT_ADDRESS> src/KaiaSafe.sol:KaiaSafe --chain-id 1001
+# Dry run (no broadcast)
+make contracts-deploy-dry-run
+
+# Verify contract on Kairos explorer
+cd contracts && forge verify-contract <CONTRACT_ADDRESS> src/SafeRoleGuard.sol:SafeRoleGuard --chain-id 1001
 ```
 
 ### Frontend (React/Next.js)
@@ -107,19 +97,19 @@ npm test
 - **`RoleGuard.sol`**: Ensures owner composition remains exactly 2 humans and 3 AI agents
 - **`FeeDelegation.sol`**: Handles Kaia's fee delegation for gasless transactions
 
-### Off-Chain Services (Node.js)
+### Off-Chain Services (Rust/Axum)
 
-- **`orchestrator/`**: Central API that manages transaction proposals, collects signatures, and submits to blockchain
+- **`backend/orchestrator/`**: Central API that manages transaction proposals, collects signatures, and submits to blockchain
   - Transaction queue management
   - Signature collection from all 5 signers
   - WebSocket for real-time updates
   
-- **`ai-agents/`**: Three independent AI services that analyze and sign transactions
+- **`backend/ai-agents/`**: Three independent AI services that analyze and sign transactions
   - **CFO Agent**: Validates against internal financial rules and budgets
   - **Security Agent**: Checks external threat databases and blacklists
   - **On-chain Analyst**: Parses transaction data and smart contract risks
   
-- **`fee-delegation/`**: Manages Kaia fee delegation for gasless user transactions
+- **`backend/fee-delegation/`**: Manages Kaia fee delegation for gasless user transactions
 
 ### Frontend Dashboard (React)
 
@@ -148,12 +138,13 @@ npm test
 - **Safe Contracts**: Multi-signature wallet implementation
 
 ### Backend
-- **Express.js/Fastify**: API framework
-- **Ethers.js/Viem**: Blockchain interaction
-- **Kaia SDK**: Fee delegation support
-- **PostgreSQL**: Transaction history storage
-- **Redis**: Caching and queue management
-- **Socket.io**: Real-time updates
+- **Axum**: Async web framework for Rust
+- **Tokio**: Async runtime
+- **Alloy**: Next-generation Ethereum/Kaia interaction library for Rust
+- **SQLx**: Async PostgreSQL driver
+- **Redis-rs**: Redis client for Rust
+- **Tower**: Middleware and service composition
+- **Serde**: Serialization/deserialization
 
 ### Frontend
 - **Next.js**: React framework
@@ -189,6 +180,6 @@ TRM_LABS_API_KEY=
 ## Testing Strategy
 
 - **Smart Contracts**: Foundry tests for all security-critical functions, especially 4-of-5 policy enforcement
-- **Backend**: Jest/Mocha tests for API endpoints, AI agent logic, signature collection
+- **Backend**: Rust unit tests and integration tests using `cargo test`, API endpoint testing with `mockito`
 - **Integration**: E2E tests simulating full transaction flow from proposal to execution
-- **AI Agents**: Unit tests for each analysis rule and decision logic
+- **AI Agents**: Unit tests for each analysis rule and decision logic using Rust's built-in testing framework

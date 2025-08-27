@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 import "forge-std/Script.sol";
 import "../src/SafeRoleGuard.sol";
@@ -30,13 +30,13 @@ interface ISafeSetup {
  * @dev Uses existing Kaia Safe infrastructure with custom guard
  */
 contract DeployWithKaiaSafe is Script {
-    // Kaia Safe addresses (플레이스 홀더; 실제 kaia 주소로 교체 필요함요)
+    // Kaia Safe addresses (실제 주소 아님; kairos 테스트넷 주소임)
     address constant SAFE_SINGLETON =
-        0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552; // Safe v1.3.0
+        0xfb1bffC9d739B8D520DaF37dF666da4C687191EA;
     address constant SAFE_PROXY_FACTORY =
-        0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2;
+        0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC;
     address constant SAFE_FALLBACK_HANDLER =
-        0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4;
+        0x017062a1dE2FE6b99BE3d9d37841FeD19F573804;
 
     // Owner configuration (update before deployment)
     address constant HUMAN_1 =
@@ -142,11 +142,11 @@ contract DeployWithKaiaSafe is Script {
 contract DeployKaiaTestnet is Script {
     // Kaia Kairos testnet addresses
     address constant SAFE_SINGLETON =
-        0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
+        0xfb1bffC9d739B8D520DaF37dF666da4C687191EA;
     address constant SAFE_PROXY_FACTORY =
-        0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2;
+        0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC;
     address constant SAFE_FALLBACK_HANDLER =
-        0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4;
+        0x017062a1dE2FE6b99BE3d9d37841FeD19F573804;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");

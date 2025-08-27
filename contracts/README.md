@@ -1,72 +1,151 @@
-## Foundry
+# Sentinel Safe Wallet - Smart Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Smart contracts for the AI-collaborative multi-signature wallet on Kaia Kairos testnet.
 
-Foundry consists of:
+## Overview
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- **SafeRoleGuard.sol**: Enforces 2-human-3-AI signer composition
+- **Deployment Target**: Kaia Kairos Testnet Only (Chain ID: 1001)
+- **RPC Endpoint**: https://public-en.kairos.node.kaia.io
 
-## Documentation
+## Prerequisites
 
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```bash
+# Install Foundry
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
 ```
 
-### Test
+## Quick Start
 
-```shell
-$ forge test
+```bash
+# Install dependencies
+forge install
+
+# Build contracts
+forge build
+
+# Run tests
+forge test
+
+# Run tests with gas report
+forge test --gas-report
 ```
 
-### Format
+## Kaia Kairos Testnet Deployment
 
-```shell
-$ forge fmt
+### 1. Set Environment Variables
+
+Create a `.env` file in the contracts directory:
+
+```env
+# Kaia Kairos Testnet RPC
+KAIROS_RPC_URL=https://public-en.kairos.node.kaia.io
+
+# Deployment private key (use a testnet-only key!)
+DEPLOYER_PRIVATE_KEY=0x...
+
+# Safe configuration
+SAFE_THRESHOLD=4
+HUMAN_SIGNER_1=0x...
+HUMAN_SIGNER_2=0x...
+AI_CFO_ADDRESS=0x...
+AI_SECURITY_ADDRESS=0x...
+AI_ANALYST_ADDRESS=0x...
 ```
 
-### Gas Snapshots
+### 2. Deploy to Kairos Testnet
 
-```shell
-$ forge snapshot
+```bash
+# Deploy contracts
+forge script script/DeployWithKaiaSafe.s.sol:DeployKaiaTestnet \
+    --rpc-url $KAIROS_RPC_URL \
+    --private-key $DEPLOYER_PRIVATE_KEY \
+    --broadcast \
+    --verify \
+    -vvvv
+
+# Or using make command from root
+make contracts-deploy-testnet
 ```
 
-### Anvil
+### 3. Verify Contract
 
-```shell
-$ anvil
+```bash
+forge verify-contract <CONTRACT_ADDRESS> src/SafeRoleGuard.sol:SafeRoleGuard \
+    --chain-id 1001 \
+    --etherscan-api-key <API_KEY>
 ```
 
-### Deploy test
+## Test Kaia (KLAY) Faucet
 
-```shell
-$ forge script script/DeployWithKaiaSafe.s.sol:DeployWithKaiaSafe --rpc-url <your_rpc_url> --private-key <your_private_key> -vvvv
+Get test KLAY for Kairos testnet:
+- https://faucet.kaia.io/
+- https://kairos.wallet.klaytn.foundation/faucet
+
+## Contract Addresses (Kairos Testnet)
+
+After deployment, update these in your `.env`:
+
+```env
+SAFE_ROLE_GUARD_ADDRESS=0x...
+SAFE_PROXY_ADDRESS=0x...
 ```
 
-### Depoly
+## Testing
 
-```shell
-$ forge script script/DeployWithKaiaSafe.s.sol:DeployWithKaiaSafe --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast -vvvv
+```bash
+# Run all tests
+forge test
+
+# Run specific test
+forge test --match-test testSuperMajority
+
+# Run with verbosity
+forge test -vvvv
+
+# Fork testing from Kairos
+forge test --fork-url https://public-en.kairos.node.kaia.io
 ```
 
-### Cast
+## Gas Optimization
 
-```shell
-$ cast <subcommand>
+```bash
+# Generate gas snapshot
+forge snapshot
+
+# Compare with previous snapshot
+forge snapshot --diff
 ```
 
-### Help
+## Security Considerations
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+- This is for TESTNET ONLY - never deploy to mainnet with test keys
+- Always use separate keys for testnet
+- The 4-of-5 multisig requires super majority for all transactions
+- Role guard ensures exactly 2 humans and 3 AI signers
+
+## Useful Commands
+
+```bash
+# Clean build artifacts
+forge clean
+
+# Format Solidity code
+forge fmt
+
+# Update dependencies
+forge update
+
+# Check contract size
+forge build --sizes
 ```
+
+## Kaia Network Info
+
+- **Network**: Kaia Kairos Testnet
+- **Chain ID**: 1001
+- **Currency**: KLAY
+- **Block Explorer**: https://kairos.kaiascope.com/
+- **RPC URL**: https://public-en.kairos.node.kaia.io
+- **WebSocket**: wss://public-en.kairos.node.kaia.io/ws
