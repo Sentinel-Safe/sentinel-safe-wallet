@@ -94,14 +94,14 @@ contracts-deploy-testnet:
 	@echo "⚠️  Deploying to Kaia Kairos TESTNET (Chain ID: 1001)"
 	@echo "Make sure you have set environment variables in contracts/.env"
 	cd contracts && forge script script/DeployKairos.s.sol:DeployKairos \
-		--rpc-url https://public-en.kairos.node.kaia.io \
+		--rpc-url https://public-en-kairos.node.kaia.io \
 		--broadcast \
 		-vvvv
 
 contracts-deploy-testnet-verify:
 	@echo "⚠️  Deploying to Kaia Kairos TESTNET with verification"
 	cd contracts && forge script script/DeployKairos.s.sol:DeployKairos \
-		--rpc-url https://public-en.kairos.node.kaia.io \
+		--rpc-url https://public-en-kairos.node.kaia.io \
 		--broadcast \
 		--verify \
 		-vvvv
@@ -109,7 +109,7 @@ contracts-deploy-testnet-verify:
 contracts-deploy-dry-run:
 	@echo "🔍 Dry run deployment (no broadcast)"
 	cd contracts && forge script script/DeployKairos.s.sol:DeployKairos \
-		--rpc-url https://public-en.kairos.node.kaia.io \
+		--rpc-url https://public-en-kairos.node.kaia.io\
 		-vvvv
 
 contracts-verify:

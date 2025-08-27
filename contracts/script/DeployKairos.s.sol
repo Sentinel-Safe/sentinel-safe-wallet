@@ -32,9 +32,12 @@ interface ISafeSetup {
 contract DeployKairos is Script {
     // Kaia Kairos Testnet Safe Infrastructure
     // These are the official Safe addresses on Kaia Kairos testnet
-    address constant SAFE_SINGLETON = 0xfb1bffC9d739B8D520DaF37dF666da4C687191EA;
-    address constant SAFE_PROXY_FACTORY = 0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC;
-    address constant SAFE_FALLBACK_HANDLER = 0x017062a1dE2FE6b99BE3d9d37841FeD19F573804;
+    address constant SAFE_SINGLETON =
+        0xfb1bffC9d739B8D520DaF37dF666da4C687191EA;
+    address constant SAFE_PROXY_FACTORY =
+        0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC;
+    address constant SAFE_FALLBACK_HANDLER =
+        0x017062a1dE2FE6b99BE3d9d37841FeD19F573804;
 
     // Required threshold for super majority
     uint256 constant THRESHOLD = 4; // 4-of-5 signatures required
@@ -42,7 +45,7 @@ contract DeployKairos is Script {
     function run() external {
         // Load environment variables
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        
+
         // Load signer addresses from environment
         address human1 = vm.envAddress("HUMAN_SIGNER_1");
         address human2 = vm.envAddress("HUMAN_SIGNER_2");
@@ -52,20 +55,14 @@ contract DeployKairos is Script {
 
         console.log("\n=== Kaia Kairos Testnet Deployment ===");
         console.log("Chain ID: 1001");
-        console.log("RPC: https://public-en.kairos.node.kaia.io");
+        console.log("RPC: https://public-en-kairos.node.kaia.io");
         console.log("Deployer:", vm.addr(deployerPrivateKey));
 
         vm.startBroadcast(deployerPrivateKey);
 
         // 1. Deploy Safe with 5 owners
-        address safe = deploySafe(
-            human1,
-            human2,
-            aiCfo,
-            aiSecurity,
-            aiAnalyst
-        );
-        
+        address safe = deploySafe(human1, human2, aiCfo, aiSecurity, aiAnalyst);
+
         // 2. Deploy SafeRoleGuard
         SafeRoleGuard guard = deployRoleGuard(
             safe,
@@ -78,17 +75,21 @@ contract DeployKairos is Script {
 
         // 3. Log deployment info
         logDeploymentInfo(safe, address(guard));
-        
+
         // 4. Save deployment addresses
         saveDeploymentAddresses(safe, address(guard));
 
         vm.stopBroadcast();
 
-        console.log("\nIMPORTANT: To activate the guard, execute this through the Safe:");
+        console.log(
+            "\nIMPORTANT: To activate the guard, execute this through the Safe:"
+        );
         console.log("   Target: %s", safe);
         console.log("   Function: setGuard(address)");
         console.log("   Parameter: %s", address(guard));
-        console.log("\nDeployment complete! Addresses saved to contracts/.env.deployed");
+        console.log(
+            "\nDeployment complete! Addresses saved to contracts/.env.deployed"
+        );
     }
 
     function deploySafe(
@@ -99,7 +100,7 @@ contract DeployKairos is Script {
         address aiAnalyst
     ) internal returns (address) {
         console.log("\nDeploying Safe multi-sig...");
-        
+
         // Prepare owners array
         address[] memory owners = new address[](5);
         owners[0] = human1;
@@ -126,7 +127,7 @@ contract DeployKairos is Script {
             SAFE_SINGLETON,
             initializer
         );
-        
+
         console.log("Safe deployed at:", safe);
         return safe;
     }
@@ -140,7 +141,7 @@ contract DeployKairos is Script {
         address aiAnalyst
     ) internal returns (SafeRoleGuard) {
         console.log("\nDeploying SafeRoleGuard...");
-        
+
         // Prepare human owners
         address[] memory humanOwners = new address[](2);
         humanOwners[0] = human1;
@@ -155,7 +156,7 @@ contract DeployKairos is Script {
         // Deploy guard
         SafeRoleGuard guard = new SafeRoleGuard(safe, humanOwners, aiOwners);
         console.log("SafeRoleGuard deployed at:", address(guard));
-        
+
         return guard;
     }
 
@@ -170,19 +171,35 @@ contract DeployKairos is Script {
 
     function saveDeploymentAddresses(address safe, address guard) internal {
         string memory timestamp = vm.toString(block.timestamp);
-        
-        string memory content = string(abi.encodePacked(
-            "# Kaia Kairos Testnet Deployment\n",
-            "# Timestamp: ", timestamp, "\n",
-            "# Block: ", vm.toString(block.number), "\n\n",
-            "SAFE_PROXY_ADDRESS=", vm.toString(safe), "\n",
-            "SAFE_ROLE_GUARD_ADDRESS=", vm.toString(guard), "\n",
-            "\n# Safe Infrastructure (Kairos)\n",
-            "SAFE_SINGLETON=", vm.toString(SAFE_SINGLETON), "\n",
-            "SAFE_PROXY_FACTORY=", vm.toString(SAFE_PROXY_FACTORY), "\n",
-            "SAFE_FALLBACK_HANDLER=", vm.toString(SAFE_FALLBACK_HANDLER), "\n"
-        ));
-        
+
+        string memory content = string(
+            abi.encodePacked(
+                "# Kaia Kairos Testnet Deployment\n",
+                "# Timestamp: ",
+                timestamp,
+                "\n",
+                "# Block: ",
+                vm.toString(block.number),
+                "\n\n",
+                "SAFE_PROXY_ADDRESS=",
+                vm.toString(safe),
+                "\n",
+                "SAFE_ROLE_GUARD_ADDRESS=",
+                vm.toString(guard),
+                "\n",
+                "\n# Safe Infrastructure (Kairos)\n",
+                "SAFE_SINGLETON=",
+                vm.toString(SAFE_SINGLETON),
+                "\n",
+                "SAFE_PROXY_FACTORY=",
+                vm.toString(SAFE_PROXY_FACTORY),
+                "\n",
+                "SAFE_FALLBACK_HANDLER=",
+                vm.toString(SAFE_FALLBACK_HANDLER),
+                "\n"
+            )
+        );
+
         vm.writeFile("contracts/.env.deployed", content);
     }
 }

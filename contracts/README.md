@@ -6,7 +6,7 @@ Smart contracts for the AI-collaborative multi-signature wallet on Kaia Kairos t
 
 - **SafeRoleGuard.sol**: Enforces 2-human-3-AI signer composition
 - **Deployment Target**: Kaia Kairos Testnet Only (Chain ID: 1001)
-- **RPC Endpoint**: https://public-en.kairos.node.kaia.io
+- **RPC Endpoint**: https://public-en-kairos.node.kaia.io
 
 ## Prerequisites
 
@@ -40,7 +40,7 @@ Create a `.env` file in the contracts directory:
 
 ```env
 # Kaia Kairos Testnet RPC
-KAIROS_RPC_URL=https://public-en.kairos.node.kaia.io
+KAIROS_RPC_URL=https://public-en-kairos.node.kaia.io
 
 # Deployment private key (use a testnet-only key!)
 DEPLOYER_PRIVATE_KEY=0x...
@@ -105,7 +105,7 @@ forge test --match-test testSuperMajority
 forge test -vvvv
 
 # Fork testing from Kairos
-forge test --fork-url https://public-en.kairos.node.kaia.io
+forge test --fork-url https://public-en-kairos.node.kaia.io
 ```
 
 ## Gas Optimization
@@ -147,5 +147,5 @@ forge build --sizes
 - **Chain ID**: 1001
 - **Currency**: KLAY
 - **Block Explorer**: https://kairos.kaiascope.com/
-- **RPC URL**: https://public-en.kairos.node.kaia.io
-- **WebSocket**: wss://public-en.kairos.node.kaia.io/ws
+- **RPC URL**: https://public-en-kairos.node.kaia.io
+- **WebSocket**: wss://public-en-kairos.node.kaia.io/ws

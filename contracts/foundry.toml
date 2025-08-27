@@ -9,7 +9,7 @@ via_ir = true
 
 # Kaia Kairos Testnet Configuration
 [rpc_endpoints]
-kairos = "https://public-en.kairos.node.kaia.io"
+kairos = "https://public-en-kairos.node.kaia.io"
 local = "http://127.0.0.1:8545"
 
 [etherscan]
@@ -31,13 +31,13 @@ fail_on_revert = false
 
 # Fork testing from Kairos
 [profile.kairos]
-fork_url = "https://public-en.kairos.node.kaia.io"
+fork_url = "https://public-en-kairos.node.kaia.io"
 fork_block_number = "latest"
 fork_chain_id = 1001
 
 # Gas settings (Kaia has different gas dynamics)
 gas_limit = 10_000_000
-gas_price = 25_000_000_000 # 25 Gwei (Kaia standard)
+gas_price = 25_000_000_000               # 25 Gwei (Kaia standard)
 gas_reports = ["SafeRoleGuard", "ISafe"]
 
 # Formatter settings

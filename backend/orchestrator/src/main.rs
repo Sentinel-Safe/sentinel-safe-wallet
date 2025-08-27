@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize RPC URL for Kaia Kairos testnet
     let rpc_url = std::env::var("KAIROS_RPC_URL")
-        .unwrap_or_else(|_| "https://public-en.kairos.node.kaia.io".to_string());
+        .unwrap_or_else(|_| "https://public-en-kairos.node.kaia.io".to_string());
 
     // Load Safe address from env
     let safe_address = std::env::var("SAFE_ADDRESS")
@@ -226,13 +226,13 @@ async fn create_transaction(
     Json(req): Json<CreateTransactionRequest>,
 ) -> Result<Json<CreateTransactionResponse>, StatusCode> {
     info!("Creating transaction to: {}, value: {}", req.to, req.value);
-    
+
     let to = Address::from_str(&req.to)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+
     let value = U256::from_str(&req.value)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+
     let data = req.data
         .and_then(|d| hex::decode(d.trim_start_matches("0x")).ok())
         .map(Bytes::from)
@@ -254,16 +254,16 @@ async fn create_transaction(
 
     let tx_id = uuid::Uuid::new_v4().to_string();
     let safe_tx_hash = format!("0x{}", hex::encode(safe_tx.encode_for_signing()));
-    
+
     let tx_state = TransactionState {
         transaction: safe_tx,
         signatures: Vec::new(),
         status: TransactionStatus::CollectingSignatures,
         tx_hash: safe_tx_hash.clone(),
     };
-    
+
     state.transactions.write().await.insert(tx_id.clone(), tx_state);
-    
+
     Ok(Json(CreateTransactionResponse {
         tx_id: tx_id.clone(),
         safe_tx_hash: safe_tx_hash.clone(),
@@ -279,27 +279,27 @@ async fn get_transaction(
 ) -> Result<Json<TransactionInfoResponse>, StatusCode> {
     let txs = state.transactions.read().await;
     let tx_state = txs.get(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
-    
+
     let signatures: Vec<SignatureInfo> = tx_state.signatures.iter().map(|sig| {
         let signer_type = if sig.signer == state.signer_addresses.human1 || sig.signer == state.signer_addresses.human2 {
             "Human"
-        } else if sig.signer == state.signer_addresses.ai_cfo || 
-                  sig.signer == state.signer_addresses.ai_security || 
+        } else if sig.signer == state.signer_addresses.ai_cfo ||
+                  sig.signer == state.signer_addresses.ai_security ||
                   sig.signer == state.signer_addresses.ai_analyst {
             "AI Agent"
         } else {
             "Unknown"
         };
-        
+
         SignatureInfo {
             signer: sig.signer.to_string(),
             signer_type: signer_type.to_string(),
             signed_at: chrono::Utc::now().to_rfc3339(),
         }
     }).collect();
-    
+
     let ready_to_execute = tx_state.signatures.len() >= 4;
-    
+
     Ok(Json(TransactionInfoResponse {
         tx_id,
         transaction: tx_state.transaction.clone(),
@@ -317,45 +317,45 @@ async fn sign_transaction(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut txs = state.transactions.write().await;
     let tx_state = txs.get_mut(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
-    
+
     let signer_addr = Address::from_str(&req.signer_address)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+
     // Check if already signed
     if tx_state.signatures.iter().any(|s| s.signer == signer_addr) {
         return Ok(Json(serde_json::json!({
             "error": "Already signed by this address"
         })));
     }
-    
+
     // All signers provide their own signatures
     let signature = hex::decode(req.signature.trim_start_matches("0x"))
         .map(Bytes::from)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+
     info!("Signer {} provided signature", req.signer_address);
-    
+
     tx_state.signatures.push(Signature {
         signer: signer_addr,
         signature,
     });
-    
+
     // Update status if we have enough signatures
     if tx_state.signatures.len() >= 4 {
         tx_state.status = TransactionStatus::ReadyToExecute;
     }
-    
+
     // Determine signer type based on known addresses
     let signer_type = if signer_addr == state.signer_addresses.human1 || signer_addr == state.signer_addresses.human2 {
         "Human"
-    } else if signer_addr == state.signer_addresses.ai_cfo || 
-              signer_addr == state.signer_addresses.ai_security || 
+    } else if signer_addr == state.signer_addresses.ai_cfo ||
+              signer_addr == state.signer_addresses.ai_security ||
               signer_addr == state.signer_addresses.ai_analyst {
         "AI Agent"
     } else {
         "Unknown"
     };
-    
+
     Ok(Json(serde_json::json!({
         "success": true,
         "signer_type": signer_type,
@@ -371,22 +371,22 @@ async fn execute_transaction(
 ) -> Result<Json<ExecuteTransactionResponse>, StatusCode> {
     let mut txs = state.transactions.write().await;
     let tx_state = txs.get_mut(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
-    
+
     if tx_state.signatures.len() < 4 {
         return Ok(Json(ExecuteTransactionResponse {
             tx_hash: String::new(),
             success: false,
         }));
     }
-    
+
     info!("Executing transaction with {} signatures", tx_state.signatures.len());
-    
+
     // Log who signed
     for (i, sig) in tx_state.signatures.iter().enumerate() {
         let signer_type = if sig.signer == state.signer_addresses.human1 || sig.signer == state.signer_addresses.human2 {
             "Human"
-        } else if sig.signer == state.signer_addresses.ai_cfo || 
-                  sig.signer == state.signer_addresses.ai_security || 
+        } else if sig.signer == state.signer_addresses.ai_cfo ||
+                  sig.signer == state.signer_addresses.ai_security ||
                   sig.signer == state.signer_addresses.ai_analyst {
             "AI Agent"
         } else {
@@ -394,12 +394,12 @@ async fn execute_transaction(
         };
         info!("  Signature {}: {} ({})", i + 1, sig.signer, signer_type);
     }
-    
+
     // In production, this would call Safe contract's execTransaction
     tx_state.status = TransactionStatus::Executed;
-    
+
     let mock_tx_hash = format!("0x{}", hex::encode(&uuid::Uuid::new_v4().as_bytes()[..]));
-    
+
     Ok(Json(ExecuteTransactionResponse {
         tx_hash: mock_tx_hash,
         success: true,
@@ -412,24 +412,24 @@ async fn get_transaction_status(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let txs = state.transactions.read().await;
     let tx_state = txs.get(&tx_id).ok_or(StatusCode::NOT_FOUND)?;
-    
+
     let signers: Vec<serde_json::Value> = tx_state.signatures.iter().map(|s| {
         let signer_type = if s.signer == state.signer_addresses.human1 || s.signer == state.signer_addresses.human2 {
             "Human"
-        } else if s.signer == state.signer_addresses.ai_cfo || 
-                  s.signer == state.signer_addresses.ai_security || 
+        } else if s.signer == state.signer_addresses.ai_cfo ||
+                  s.signer == state.signer_addresses.ai_security ||
                   s.signer == state.signer_addresses.ai_analyst {
             "AI Agent"
         } else {
             "Unknown"
         };
-        
+
         serde_json::json!({
             "address": s.signer.to_string(),
             "type": signer_type
         })
     }).collect();
-    
+
     Ok(Json(serde_json::json!({
         "tx_id": tx_id,
         "status": tx_state.status,

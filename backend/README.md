@@ -54,7 +54,7 @@ Create a `.env` file in the backend directory:
 
 ```env
 # RPC
-KAIA_RPC_URL=https://public-en.kairos.node.kaia.io
+KAIA_RPC_URL=https://public-en-kairos.node.kaia.io
 
 # Contract Addresses
 SAFE_CONTRACT_ADDRESS=

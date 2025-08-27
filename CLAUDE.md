@@ -116,12 +116,12 @@ npm test
   - Transaction queue management
   - Signature collection from all 5 signers
   - WebSocket for real-time updates
-  
+
 - **`backend/ai-agents/`**: Three independent AI services that analyze and sign transactions
   - **CFO Agent**: Validates against internal financial rules and budgets
   - **Security Agent**: Checks external threat databases and blacklists
   - **On-chain Analyst**: Parses transaction data and smart contract risks
-  
+
 - **`backend/fee-delegation/`**: Manages Kaia fee delegation for gasless user transactions
 
 ### Frontend Dashboard (React)
@@ -169,7 +169,7 @@ npm test
 
 ```bash
 # Blockchain
-KAIA_RPC_URL=https://public-en.kairos.node.kaia.io
+KAIA_RPC_URL=https://public-en-kairos.node.kaia.io
 SAFE_CONTRACT_ADDRESS=
 ROLE_GUARD_ADDRESS=
 
