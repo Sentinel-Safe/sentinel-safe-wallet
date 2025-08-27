@@ -637,11 +637,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "eth-account", specifier = ">=0.13.0" },
-    { name = "eth-utils", specifier = ">=5.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "requests", specifier = ">=2.32.0" },
-    { name = "web3", specifier = ">=7.6.0" },
+    { name = "eth-account", specifier = ">=0.13.7" },
+    { name = "eth-utils", specifier = ">=5.3.0" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
+    { name = "requests", specifier = ">=2.32.5" },
+    { name = "web3", specifier = ">=7.13.0" },
 ]
 
 [[package]]
