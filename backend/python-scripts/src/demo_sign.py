@@ -81,20 +81,20 @@ API_URL = "http://localhost:3001/api/v1"
 def create_transaction() -> Dict[str, Any]:
     """Create a new transaction proposal interactively"""
     print("\n" + "=" * 60)
-    print("💼 새 트랜잭션 생성")
+    print("💼 Create New Transaction")
     print("=" * 60)
 
     # Get recipient address
-    print("\n📮 수신자 주소를 입력하세요")
-    print("   (Enter 누르면 기본값: 0x6f512E3F002065813B92009C74E3a7966e7F87E1)")
+    print("\n📮 Enter recipient address")
+    print("   (Press Enter for default: 0x6f512E3F002065813B92009C74E3a7966e7F87E1)")
     print("   > ", end="")
     to_address = input().strip()
     if not to_address:
         to_address = "0x6f512E3F002065813B92009C74E3a7966e7F87E1"
 
     # Get amount
-    print("\n💰 전송할 KAIA 양을 입력하세요")
-    print("   (Enter 누르면 기본값: 0.001 KAIA)")
+    print("\n💰 Enter amount of KAIA to send")
+    print("   (Press Enter for default: 0.001 KAIA)")
     print("   > ", end="")
     amount_str = input().strip()
     if not amount_str:
@@ -103,7 +103,7 @@ def create_transaction() -> Dict[str, Any]:
     # Convert to wei
     amount_wei = str(int(float(amount_str) * 10**18))
 
-    print("\n📝 트랜잭션 생성 중...")
+    print("\n📝 Creating transaction...")
     print(f"   To: {to_address}")
     print(f"   Amount: {amount_str} KAIA")
 
@@ -120,7 +120,7 @@ def create_transaction() -> Dict[str, Any]:
         raise Exception(f"Failed to create transaction: {response.text}")
 
     result = response.json()
-    print("\n✅ 트랜잭션 생성 완료!")
+    print("\n✅ Transaction created successfully!")
     print(f"   TX ID: {result['tx_id']}")
     print(f"   Safe TX Hash: {result['safe_tx_hash'][:10]}...")
 
@@ -196,33 +196,33 @@ def submit_signature(
     print(f"🔐 {signer_name} ({signer_info['type'].replace('_', ' ').title()})")
     print(f"{'=' * 50}")
     print(f"📍 Address: {signer_info['address']}")
-    print(f"📊 현재 서명 수: {signatures_count}/5")
+    print(f"📊 Current signatures: {signatures_count}/5")
 
     # AI agents can analyze the transaction
     if signer_info["type"] == "ai_agent":
-        print(f"\n🤖 {signer_name} 분석 중...")
+        print(f"\n🤖 {signer_name} analyzing...")
         time.sleep(0.5)  # Simulate analysis time
 
         if "CFO" in signer_name:
-            print("   💰 재무 규칙 검증: ✅ 1 KAIA - 일일 한도 내")
-            print("   📊 예산 준수: ✅ 테스트 한도 이내")
+            print("   💰 Financial rules verification: ✅ 1 KAIA - within daily limit")
+            print("   📊 Budget compliance: ✅ Within test limits")
         elif "Security" in signer_name:
-            print("   🔒 수신 주소 검증: ✅ 블랙리스트 없음")
-            print("   ⚠️  위험도 평가: 낮음")
+            print("   🔒 Recipient address verification: ✅ Not blacklisted")
+            print("   ⚠️  Risk assessment: Low")
         elif "Analyst" in signer_name:
-            print("   📈 트랜잭션 분석: 단순 전송")
-            print("   🔍 컨트랙트 위험: 없음")
+            print("   📈 Transaction analysis: Simple transfer")
+            print("   🔍 Contract risk: None")
 
     # Ask for confirmation
-    print(f"\n❓ {signer_name}(으)로 서명하시겠습니까? (y/n): ", end="")
+    print(f"\n❓ Sign with {signer_name}? (y/n): ", end="")
     response = input().strip().lower()
 
     if response != "y":
-        print(f"   ⏭️  {signer_name} 서명 건너뜀")
+        print(f"   ⏭️  Skipped {signer_name} signature")
         print()
         return False
 
-    print("\n🖊️  서명 중...")
+    print("\n🖊️  Signing...")
     # All signers provide their own signatures
     signature = sign_message_with_key(tx_hash, signer_info["private_key"])
 
@@ -235,13 +235,13 @@ def submit_signature(
         result = response.json()
         if "success" in result and result["success"]:
             print(
-                f"   ✅ 서명 완료! (총 {result['current_signatures']}/{result['required_signatures']} 서명 수집)"
+                f"   ✅ Signature complete! (Total {result['current_signatures']}/{result['required_signatures']} signatures collected)"
             )
             return True
         else:
-            print(f"   ❌ 서명 실패: {result.get('error', 'Unknown error')}")
+            print(f"   ❌ Signature failed: {result.get('error', 'Unknown error')}")
     else:
-        print(f"   ❌ 요청 실패: {response.status_code}")
+        print(f"   ❌ Request failed: {response.status_code}")
 
     return False
 
@@ -336,7 +336,7 @@ def main():
             return 1
 
         print("\n" + "=" * 60)
-        print("📝 서명 수집 시작 (최소 4/5 필요)")
+        print("📝 Starting signature collection (minimum 4/5 required)")
         print("=" * 60)
 
         signatures_collected = 0
@@ -357,7 +357,7 @@ def main():
 
                 # Check if we have enough signatures
                 if signatures_collected >= 4:
-                    print(f"\n🎉 충분한 서명 수집 완료! ({signatures_collected}/5)")
+                    print(f"\n🎉 Sufficient signatures collected! ({signatures_collected}/5)")
 
                     # Ask if they want to continue with the 5th signer
                     if (
@@ -369,7 +369,7 @@ def main():
                         )
                         > 0
                     ):
-                        print("\n❓ 추가 서명을 받으시겠습니까? (y/n): ", end="")
+                        print("\n❓ Collect additional signatures? (y/n): ", end="")
                         continue_signing = input().strip().lower()
                         if continue_signing != "y":
                             break
@@ -380,21 +380,21 @@ def main():
 
         # 4. Execute transaction if we have enough signatures
         if status and status["signatures_collected"] >= 4:
-            print("\n❓ 트랜잭션을 실행하시겠습니까? (y/n): ", end="")
+            print("\n❓ Execute the transaction? (y/n): ", end="")
             execute_response = input().strip().lower()
 
             if execute_response == "y":
                 execute_result = execute_transaction(tx_id)
             else:
-                print("⏸️  트랜잭션 실행 보류")
+                print("⏸️  Transaction execution deferred")
         else:
             print(
-                f"\n❌ 서명 부족으로 실행 불가 ({status['signatures_collected']}/4 필요)"
+                f"\n❌ Cannot execute due to insufficient signatures ({status['signatures_collected']}/4 required)"
             )
 
         print()
         print("=" * 60)
-        print("🏁 데모 완료!")
+        print("🏁 Demo completed!")
         print("=" * 60)
         print()
 
