@@ -167,11 +167,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health))
         .route("/api/v1/safe/info", get(get_safe_info))
         .route("/api/v1/transactions", post(create_transaction))
-        .route("/api/v1/transactions/:tx_id", get(get_transaction))
-        .route("/api/v1/transactions/:tx_id/sign", post(sign_transaction))
-        .route("/api/v1/transactions/:tx_id/execute", post(execute_transaction))
-        .route("/api/v1/transactions/:tx_id/status", get(get_transaction_status))
-        .route("/api/v1/ai-agents/analyze/:tx_id", get(ai_analyze_transaction))
+        .route("/api/v1/transactions/{tx_id}", get(get_transaction))
+        .route("/api/v1/transactions/{tx_id}/sign", post(sign_transaction))
+        .route("/api/v1/transactions/{tx_id}/execute", post(execute_transaction))
+        .route("/api/v1/transactions/{tx_id}/status", get(get_transaction_status))
+        .route("/api/v1/ai-agents/analyze/{tx_id}", get(ai_analyze_transaction))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
