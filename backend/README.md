@@ -29,11 +29,6 @@ cargo test
 cargo run --bin orchestrator
 cargo run --bin ai-agents
 cargo run --bin fee-delegation
-
-# Or use npm scripts from root directory
-npm run dev:orchestrator
-npm run dev:ai-agents
-npm run dev:fee-delegation
 ```
 
 ## Development

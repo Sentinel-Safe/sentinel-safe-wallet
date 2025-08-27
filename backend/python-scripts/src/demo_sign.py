@@ -79,14 +79,39 @@ API_URL = "http://localhost:3001/api/v1"
 
 
 def create_transaction() -> Dict[str, Any]:
-    """Create a new transaction proposal"""
-    print("📝 Creating transaction proposal...")
+    """Create a new transaction proposal interactively"""
+    print("\n" + "="*60)
+    print("💼 새 트랜잭션 생성")
+    print("="*60)
+    
+    # Get recipient address
+    print("\n📮 수신자 주소를 입력하세요")
+    print("   (Enter 누르면 기본값: 0x6f512E3F002065813B92009C74E3a7966e7F87E1)")
+    print("   > ", end="")
+    to_address = input().strip()
+    if not to_address:
+        to_address = "0x6f512E3F002065813B92009C74E3a7966e7F87E1"
+    
+    # Get amount
+    print("\n💰 전송할 KAIA 양을 입력하세요")
+    print("   (Enter 누르면 기본값: 0.001 KAIA)")
+    print("   > ", end="")
+    amount_str = input().strip()
+    if not amount_str:
+        amount_str = "0.001"
+    
+    # Convert to wei
+    amount_wei = str(int(float(amount_str) * 10**18))
+    
+    print(f"\n📝 트랜잭션 생성 중...")
+    print(f"   To: {to_address}")
+    print(f"   Amount: {amount_str} KAIA")
 
     response = requests.post(
         f"{API_URL}/transactions",
         json={
-            "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5",
-            "value": "1000000000000000",  # 0.001 ETH
+            "to": to_address,
+            "value": amount_wei,
             "data": None,
         },
     )
@@ -95,10 +120,9 @@ def create_transaction() -> Dict[str, Any]:
         raise Exception(f"Failed to create transaction: {response.text}")
 
     result = response.json()
-    print("✅ Transaction created:")
+    print(f"\n✅ 트랜잭션 생성 완료!")
     print(f"   TX ID: {result['tx_id']}")
-    print(f"   Hash to sign: {result['safe_tx_hash']}")
-    print()
+    print(f"   Safe TX Hash: {result['safe_tx_hash'][:10]}...")
 
     return result
 
@@ -124,14 +148,41 @@ def sign_message_with_key(message_hash: str, private_key: str) -> str:
 
 
 def submit_signature(
-    tx_id: str, signer_name: str, signer_info: Dict[str, str], tx_hash: str
-):
-    """Submit a signature to the orchestrator"""
+    tx_id: str, signer_name: str, signer_info: Dict[str, str], tx_hash: str, signatures_count: int
+) -> bool:
+    """Submit a signature to the orchestrator with interactive confirmation"""
 
-    print(f"🖊️  {signer_name} signing...")
-    print(f"   Address: {signer_info['address']}")
-    print(f"   Type: {signer_info['type']}")
+    print(f"\n{'='*50}")
+    print(f"🔐 {signer_name} ({signer_info['type'].replace('_', ' ').title()})")
+    print(f"{'='*50}")
+    print(f"📍 Address: {signer_info['address']}")
+    print(f"📊 현재 서명 수: {signatures_count}/5")
+    
+    # AI agents can analyze the transaction
+    if signer_info['type'] == 'ai_agent':
+        print(f"\n🤖 {signer_name} 분석 중...")
+        time.sleep(0.5)  # Simulate analysis time
+        
+        if "CFO" in signer_name:
+            print("   💰 재무 규칙 검증: ✅ 0.001 KAIA - 일일 한도 내")
+            print("   📊 예산 준수: ✅ 테스트 한도 이내")
+        elif "Security" in signer_name:
+            print("   🔒 수신 주소 검증: ✅ 블랙리스트 없음")
+            print("   ⚠️  위험도 평가: 낮음")
+        elif "Analyst" in signer_name:
+            print("   📈 트랜잭션 분석: 단순 전송")
+            print("   🔍 컨트랙트 위험: 없음")
+    
+    # Ask for confirmation
+    print(f"\n❓ {signer_name}(으)로 서명하시겠습니까? (y/n): ", end="")
+    response = input().strip().lower()
+    
+    if response != 'y':
+        print(f"   ⏭️  {signer_name} 서명 건너뜀")
+        print()
+        return False
 
+    print(f"\n🖊️  서명 중...")
     # All signers provide their own signatures
     signature = sign_message_with_key(tx_hash, signer_info["private_key"])
 
@@ -144,15 +195,15 @@ def submit_signature(
         result = response.json()
         if "success" in result and result["success"]:
             print(
-                f"   ✅ Signed successfully ({result['current_signatures']}/{result['required_signatures']} signatures)"
+                f"   ✅ 서명 완료! (총 {result['current_signatures']}/{result['required_signatures']} 서명 수집)"
             )
+            return True
         else:
-            print(f"   ❌ Signing failed: {result.get('error', 'Unknown error')}")
+            print(f"   ❌ 서명 실패: {result.get('error', 'Unknown error')}")
     else:
-        print(f"   ❌ Request failed: {response.status_code}")
+        print(f"   ❌ 요청 실패: {response.status_code}")
 
-    print()
-    return response.json()
+    return False
 
 
 def check_status(tx_id: str):
@@ -235,8 +286,7 @@ def main():
         tx_id = tx_result["tx_id"]
         tx_hash = tx_result["safe_tx_hash"]
 
-        # 2. Collect signatures from first 4 signers
-        # This simulates the minimum required signatures
+        # 2. Collect signatures from all signers interactively
         signers_list = list(DEMO_SIGNERS.items())
 
         if len(signers_list) < 4:
@@ -245,36 +295,55 @@ def main():
             )
             return 1
 
-        # Use first 4 signers for the demo
-        signers_to_use = signers_list[:4]
+        print("\n" + "="*60)
+        print("📝 서명 수집 시작 (최소 4/5 필요)")
+        print("="*60)
 
-        print("📝 Collecting signatures (need 4 out of 5)...")
-        print("-" * 40)
-        print()
+        signatures_collected = 0
+        signed_addresses = set()
 
-        for signer_name, signer_info in signers_to_use:
-            submit_signature(tx_id, signer_name, signer_info, tx_hash)
-            time.sleep(1)  # Small delay for demo effect
+        # Go through all 5 signers
+        for signer_name, signer_info in signers_list:
+            # Skip if already signed
+            if signer_info["address"] in signed_addresses:
+                continue
+                
+            # Submit signature with current count
+            if submit_signature(tx_id, signer_name, signer_info, tx_hash, signatures_collected):
+                signatures_collected += 1
+                signed_addresses.add(signer_info["address"])
+                
+                # Check if we have enough signatures
+                if signatures_collected >= 4:
+                    print(f"\n🎉 충분한 서명 수집 완료! ({signatures_collected}/5)")
+                    
+                    # Ask if they want to continue with the 5th signer
+                    if signatures_collected < 5 and (len(signers_list) - signers_list.index((signer_name, signer_info)) - 1) > 0:
+                        print("\n❓ 추가 서명을 받으시겠습니까? (y/n): ", end="")
+                        continue_signing = input().strip().lower()
+                        if continue_signing != 'y':
+                            break
 
-        # 3. Check status
+        print("\n" + "="*60)
+        # 3. Check final status
         status = check_status(tx_id)
 
         # 4. Execute transaction if we have enough signatures
         if status and status["signatures_collected"] >= 4:
-            print("✅ Sufficient signatures collected!")
-            print()
-            execute_result = execute_transaction(tx_id)
+            print("\n❓ 트랜잭션을 실행하시겠습니까? (y/n): ", end="")
+            execute_response = input().strip().lower()
+            
+            if execute_response == 'y':
+                execute_result = execute_transaction(tx_id)
+            else:
+                print("⏸️  트랜잭션 실행 보류")
         else:
-            print("❌ Not enough signatures to execute")
+            print(f"\n❌ 서명 부족으로 실행 불가 ({status['signatures_collected']}/4 필요)")
 
         print()
         print("=" * 60)
-        print("Demo completed!")
-        print()
-
-        # Optional: Show what happens if 5th signer tries to sign
-        print("📌 Optional: 5th signer (AI Analyst) could also sign...")
-        print("   But transaction only needs 4 signatures")
+        print("🏁 데모 완료!")
+        print("=" * 60)
         print()
 
     except Exception as e:
